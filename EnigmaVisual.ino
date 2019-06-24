@@ -37,7 +37,7 @@
 //    the serial port.
 //
 
-#define SERIAL_MODE
+//#define SERIAL_MODE
 
 //
 // The following pins are used in this project:
@@ -63,26 +63,24 @@
 
 #include <SPI.h>
 #include <Wire.h>            // this is needed even though we aren't using it directly
-#include <Adafruit_ILI9341.h>
-#include <Adafruit_STMPE610.h>
 #include <Adafruit_GFX.h>    // Core graphics library
+#include <MCUFRIEND_kbv.h>
+#include <TouchScreen.h>
 
 // This is calibration data for the raw touch data to the screen coordinates
 // (NOTE: run the TFTcal-Adafruit.ino sketch to determine the calibration values
 //        for your specific touchscreen display)
-const int TS_MINX = 150;
-const int TS_MINY = 200;
-const int TS_MAXX = 3830;
-const int TS_MAXY = 3750;
+const int TS_MINX = 896;
+const int TS_MINY = 96;
+const int TS_MAXX = 134;
+const int TS_MAXY = 882;
 
-// The STMPE610 uses hardware SPI on the shield, and pin #8 for ChipSelect
-const int STMPE_CHIP_SELECT = 8;
-Adafruit_STMPE610 ts = Adafruit_STMPE610(STMPE_CHIP_SELECT);
+const int XP=8,XM=A2,YP=A3,YM=9; //240x320 ID=0x9595
+const int TS_LEFT=896,TS_RT=134,TS_TOP=96,TS_BOT=882;
 
-// The display also uses hardware SPI, plus pin #9 as DataCommand & pin #10 as ChipSelect
-const int TFT_CHIP_SELECT = 10;
-const int TFT_DATA_COMMAND = 9;
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CHIP_SELECT, TFT_DATA_COMMAND);
+TouchScreen ts =  TouchScreen(XP, YP, XM, YM, 300);
+
+MCUFRIEND_kbv tft;
 
 // define constant display strings
 #define TITLE            F(" Visual Simulator ")
@@ -105,6 +103,15 @@ const int MY_ILI9341_LIGHT_GRAY       = 0x8410;
 const int MY_ILI9341_BRASS            = 0xBC20;
 const int MY_ILI9341_PAPER            = 0xFDE7;
 const int MY_ILI9341_ORANGE           = 0xFC00;
+const int ILI9341_CYAN = 0x07FF;
+const int ILI9341_BLACK = 0x0000;
+const int ILI9341_MAGENTA = 0xF81F;
+const int ILI9341_WHITE = 0xFFFF;
+const int ILI9341_YELLOW = 0xFFE0;
+const int ILI9341_BLUE = 0x001F;
+const int ILI9341_GREEN = 0x07E0;
+const int ILI9341_ORANGE = 0xFC00;
+const int ILI9341_RED = 0xF800;
 
 #define STR_EXPAND(tok) #tok
 #define STR(tok) STR_EXPAND(tok)
@@ -857,6 +864,7 @@ void draw_display(void)
    {
       case SPLASH_STATE:
       {
+         //Serial.println("Splash Screen");
          erase_background();
 
          // draw the Enigma logo (2x size)
@@ -1451,6 +1459,8 @@ char encode_key(char key)
 // erase the background to crinkle black/gray
 void erase_background(void)
 {
+   //Serial.println("Erasing BG");
+   tft.fillScreen(ILI9341_BLACK);
    for (int y = 0; y < 320; y++)
    {
       tft.drawFastHLine(0, y, 240, ILI9341_BLACK);
@@ -1522,7 +1532,7 @@ void loop()
 #ifdef SERIAL_MODE
   process_serial();
 #endif
-
+  
   process_buttons();
 }  // loop()
 
@@ -1626,25 +1636,32 @@ void print_machine_type()
 // detect button presses
 void process_buttons()
 {
+   //Serial.println("Processing Buttons");
    boolean key_pressed = false;
    boolean button_pressed = false;
    boolean wait_for_release = false;
 
    char encoded_key;
    char pressed_key;
-
-   // See if there's any touch data for us
-   if (ts.bufferEmpty())
-   {
-      return;
-   }
-
+   TSPoint p;
+   
    // a point object holds x y and z coordinates.
-   TS_Point p = ts.getPoint();
-
+   
+    while (1) {
+        p = ts.getPoint();
+        pinMode(XM, OUTPUT);
+        pinMode(YP, OUTPUT);
+        if (p.z < 200 || p.z > 1000) continue;
+        //if (p.x > 450 && p.x < 570  && p.y > 450 && p.y < 570) break;
+        //Serial.println("p.x=" + String(p.x) + " p.y=" + String(p.y) + "   ");
+        break;
+    }
+    
    // Scale from ~0->4000 to tft.width using the calibration #'s
    p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
    p.y = map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
+
+//Serial.println("New p.x=" + String(p.x) + " p.y=" + String(p.y) + "   ");
 
 //   // show where the screen was touched (for debugging purposes)
 //   tft.fillRect(0, 0, 240, 10, ILI9341_BLACK);
@@ -1658,12 +1675,9 @@ void process_buttons()
 //   tft.println("Y: ");
 //   tft.setCursor(145, 0);
 //   tft.println(p.y);
+//   tft.fillCircle(p.x,p.y,10,0xFF00);
 
    // now, empty any buffered data
-   while (! ts.bufferEmpty())
-   {
-      TS_Point p_discard = ts.getPoint();
-   }
 
    switch (enigma_state)
    {
@@ -1770,7 +1784,7 @@ void process_buttons()
             if ((p.x >= 7) && (p.x <= 31))
             {
                pressed_key = 'Q';
-
+               //Serial.println("Q PRESSED!");
                encoded_key = process_key_inputs(pressed_key);
 
                key_pressed = true;
@@ -2290,38 +2304,27 @@ void process_buttons()
    if (button_pressed)
    {
       boolean debounce = true;
-
+      TSPoint tp;
       while ((wait_for_release) && (debounce))
       {
-         while (ts.touched())
-         {
-            TS_Point discard_p = ts.getPoint();
-            delay(50);
-         }
-
-         // see if the touch has really gone away,
-         // or did we just slip through the built-in debounce ??
-         TS_Point p_discard = ts.getPoint();
-
-         // if currently not being touched, then empty any buffered data
-         if (! ts.touched())
-         {
-            while (! ts.bufferEmpty())
-            {
-               TS_Point p_discard = ts.getPoint();
-            }
-
-            debounce = false;
-         }
+        tp = ts.getPoint();
+        pinMode(XM, OUTPUT);
+        pinMode(YP, OUTPUT);delay(50);
+        //Serial.println("Waiting for Release "+String(tp.z));
+        if (tp.z > 100 && tp.z < 1000) continue;
+        //Serial.println("Released "+String(tp.z));
+        break;
       }
 
       if (key_pressed)
       {
+         //Serial.println("KeyPress Routine");
          draw_keys(pressed_key, NOT_PRESSED);
          draw_lights(encoded_key, NOT_PRESSED);
       }
       else
       {
+         //Serial.println("ButtonInput Routine");
          process_button_inputs(p);
       }
    }
@@ -2329,8 +2332,9 @@ void process_buttons()
 
 
 // act on button presses
-void process_button_inputs(TS_Point p)
+void process_button_inputs(TSPoint p)
 {
+   //Serial.println("Button Input p.x=" + String(p.x) + " p.y=" + String(p.y) + "   ");
    switch (enigma_state)
    {
       case SPLASH_STATE:
@@ -3517,6 +3521,8 @@ char process_key_inputs(char pressed_key)
 {
    char encoded_key;
 
+   //Serial.println("Key Pressed");
+
    draw_keys(pressed_key, IS_PRESSED);
 
    move_wheels();
@@ -3708,12 +3714,8 @@ void serial_monitor(char k)
 void setup(void)
 {
    Serial.begin(9600);
-
-   delay(500);
-   tft.begin();  // init TFT library
-   delay(100);
-   ts.begin();   // init TouchScreen library
-   delay(100);
+   tft.begin(0x9595);  // init TFT library
+   //Serial.println("LCD initialized");
 
    analogReference(DEFAULT);
 
