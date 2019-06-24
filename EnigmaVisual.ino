@@ -28,7 +28,6 @@
 //    If this version is built using older versions of the IDE and/or aome versions of the Adafruit TFT library,
 //    the resulting compiled code could exceed the available program space.  When this version is built with IDE
 //    version 1.8.7, the resulting code is efficient enough that it fits within the available program space.  If
-//    you find that the available program space is exceeded when this program is built, then simply comment out
 //    the line "#define SERIAL_MODE" (which appears immediately following this note), essentially removing the
 //    calls for run-time serial input & output, which should thus avoid exceeding the available program space
 //    until the IDE and/or Adafruit TFT library can be updated to newer versions.  Of course, doing so also
