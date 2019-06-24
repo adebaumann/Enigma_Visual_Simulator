@@ -6,16 +6,14 @@ Enigma Visual version 1.3 dated 03/10/2019 @2110
 
 HARDWARE:
 
-   This project runs on an Arduino Uno or equivalent.  For me personally, I
-      prefer the SparkFun RedBoard - Programmed with Arduino (DEV-13975) -
-      https://www.sparkfun.com/products/13975
-
-   For the visual (graphical) version of the Enigma machine, this project uses
-      the Adafruit 2.8" TFT Touch Shield for Arduino with Resistive Touch
-      Screen (1651) - https://www.adafruit.com/product/1651
-
+   This project runs on an Arduino Uno or equivalent.
+   
+   For the visual (graphical) version of the Enigma machine, this fork uses
+      a cheap Chinese made 2.8" TFT Touch Shield for Arduino with Resistive Touch
+      Screen.
+      
    This particular display provides touchscreen input & 320x240 full color
-      display using the Adafruit Touch Shield V2 library.
+      display using the MCUFriend library and the Adafruit Touchscreen library.
 
 DISPLAY CALIBRATION:
 
