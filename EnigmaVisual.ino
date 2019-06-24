@@ -28,7 +28,6 @@
 //    If this version is built using older versions of the IDE and/or aome versions of the Adafruit TFT library,
 //    the resulting compiled code could exceed the available program space.  When this version is built with IDE
 //    version 1.8.7, the resulting code is efficient enough that it fits within the available program space.  If
-//    you find that the available program space is exceeded when this program is built, then simply comment out
 //    the line "#define SERIAL_MODE" (which appears immediately following this note), essentially removing the
 //    calls for run-time serial input & output, which should thus avoid exceeding the available program space
 //    until the IDE and/or Adafruit TFT library can be updated to newer versions.  Of course, doing so also
@@ -37,7 +36,16 @@
 //    the serial port.
 //
 
-//#define SERIAL_MODE
+#define SERIAL_MODE
+
+// If Serial mode is in use (see above), the memory used is just over 100%, probably due to the MCUFriend library
+// not being as efficient as the Adafruit one. However, disabling the crinkle-paint background pushes the used
+// program memory down to 99%, so for the moment (or unless you use an Arduino Mega) it's either serial mode or
+// crinkle paint background.
+//
+
+//#define REALISTIC_BACKGROUND
+
 
 //
 // The following pins are used in this project:
@@ -70,10 +78,10 @@
 // This is calibration data for the raw touch data to the screen coordinates
 // (NOTE: run the TFTcal-Adafruit.ino sketch to determine the calibration values
 //        for your specific touchscreen display)
-const int TS_MINX = 896;
-const int TS_MINY = 96;
-const int TS_MAXX = 134;
-const int TS_MAXY = 882;
+const int TS_MAXX = 896;
+const int TS_MAXY = 96;
+const int TS_MINX = 134;
+const int TS_MINY = 882;
 
 const int XP=8,XM=A2,YP=A3,YM=9; //240x320 ID=0x9595
 const int TS_LEFT=896,TS_RT=134,TS_TOP=96,TS_BOT=882;
@@ -473,7 +481,7 @@ void draw_config_plugboard(void)
       for (int y = 190; y < 280; y++)
       {
          tft.drawFastHLine(0, y, 240, ILI9341_BLACK);
-
+#ifdef REALISTIC_BACKGROUND
          for (int x = random(7); x < 240; x+=random(7)+1)
          {
             int r = random(10);
@@ -497,6 +505,7 @@ void draw_config_plugboard(void)
                }
             }
          }
+#endif
       }
    }
 }  // draw_config_plugboard()
@@ -1460,11 +1469,11 @@ char encode_key(char key)
 void erase_background(void)
 {
    //Serial.println("Erasing BG");
-   tft.fillScreen(ILI9341_BLACK);
+   tft.fillScreen(MY_ILI9341_DARK_GRAY);
    for (int y = 0; y < 320; y++)
    {
       tft.drawFastHLine(0, y, 240, ILI9341_BLACK);
-
+#ifdef REALISTIC_BACKGROUND
       for (int x = random(7); x < 240; x+=random(7)+1)
       {
          int r = random(10);
@@ -1488,6 +1497,7 @@ void erase_background(void)
             }
          }
       }
+#endif
    }
 }  // erase_background()
 
@@ -2305,13 +2315,16 @@ void process_buttons()
    {
       boolean debounce = true;
       TSPoint tp;
+      int Count = 0;
       while ((wait_for_release) && (debounce))
       {
         tp = ts.getPoint();
         pinMode(XM, OUTPUT);
-        pinMode(YP, OUTPUT);delay(50);
+        pinMode(YP, OUTPUT);delay(20);
+        Count++;
         //Serial.println("Waiting for Release "+String(tp.z));
-        if (tp.z > 100 && tp.z < 1000) continue;
+        if (tp.z > 100 && tp.z < 1000) {Count = 0;continue;}
+        if (Count < 3) continue;
         //Serial.println("Released "+String(tp.z));
         break;
       }
@@ -3715,6 +3728,7 @@ void setup(void)
 {
    Serial.begin(9600);
    tft.begin(0x9595);  // init TFT library
+   tft.setRotation(2);
    //Serial.println("LCD initialized");
 
    analogReference(DEFAULT);
